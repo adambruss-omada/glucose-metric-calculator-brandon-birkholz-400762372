@@ -3,7 +3,9 @@
 ## Design considerations
 
 I've deliberately kept the Member model and authentication light, as I considered it out of scope for this project. Authentication of API requests is done via JWTs that contain a Member id.
-This way, we can use the authenticated Member to look up their associated glucose metrics. Login and Logout is assumed, but omitted. Tests generate a JWT as needed.
+This way, we can use the authenticated Member to look up their associated glucose metrics. Registration, Login, and Logout are assumed, but omitted. Tests generate a JWT as needed. The frontend uses a hardcoded JWT.
+
+Submitting glucose measurements is also considered out of scope.
 
 ## Cursor prompts
 

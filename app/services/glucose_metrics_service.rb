@@ -18,7 +18,7 @@ class GlucoseMetricsService
     readings = glucose_readings
     return 0 if readings.empty?
 
-    readings.sum(&:value).to_f / readings.count
+    (readings.sum(&:value).to_f / readings.count).round(2)
   end
 
   def calculate_time_above_range
