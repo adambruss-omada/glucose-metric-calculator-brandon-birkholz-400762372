@@ -39,13 +39,18 @@ const App = () => {
     fetchMetrics();
   }, [timeFrame]);
 
+  const formatChange = (change) => {
+    if (change === 0) return "No change";
+    const sign = change > 0 ? "+" : "-";
+    return `${sign}${change}%`;
+  };
+
   return (
     <>
       <div>
         <h1>Glucose Metrics Calculator</h1>
       </div>
       <div>
-        <h2>Glucose Metrics</h2>
         <div className="time-frame-selector">
           <label htmlFor="timeFrame">Time Frame: </label>
           <select
@@ -61,11 +66,32 @@ const App = () => {
         {loading && <p>Loading metrics...</p>}
         {error && <p className="error">Error: {error}</p>}
         {metrics && !loading && !error && (
-          <div className="metrics">
-            <p>Average Glucose: {metrics.average_glucose} mg/dL</p>
-            <p>Time Above Range: {metrics.time_above_range}%</p>
-            <p>Time Below Range: {metrics.time_below_range}%</p>
-          </div>
+          <table className="metrics-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Current Value</th>
+                <th>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Average Glucose</td>
+                <td>{metrics.average_glucose} mg/dL</td>
+                <td>{formatChange(metrics.average_glucose_change)}</td>
+              </tr>
+              <tr>
+                <td>Time Above Range</td>
+                <td>{metrics.time_above_range}%</td>
+                <td>{formatChange(metrics.time_above_range_change)}</td>
+              </tr>
+              <tr>
+                <td>Time Below Range</td>
+                <td>{metrics.time_below_range}%</td>
+                <td>{formatChange(metrics.time_below_range_change)}</td>
+              </tr>
+            </tbody>
+          </table>
         )}
       </div>
     </>

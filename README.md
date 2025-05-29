@@ -7,6 +7,8 @@ This way, we can use the authenticated Member to look up their associated glucos
 
 Submitting glucose measurements is also considered out of scope.
 
+Given that my conversation with Adam indicated that frontend is a low priority for his team, I've kept the frontend very simple, with standard unstyled HTML.
+
 ## Cursor prompts
 
 ## Prerequisites
