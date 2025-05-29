@@ -1,6 +1,11 @@
 # Glucose Metrics Calculator
 
-## Cursor prompts:
+## Design considerations
+
+I've deliberately kept the Member model and authentication light, as I considered it out of scope for this project. Authentication of API requests is done via JWTs that contain a Member id.
+This way, we can use the authenticated Member to look up their associated glucose metrics. Login and Logout is assumed, but omitted. Tests generate a JWT as needed.
+
+## Cursor prompts
 
 ## Prerequisites
 
