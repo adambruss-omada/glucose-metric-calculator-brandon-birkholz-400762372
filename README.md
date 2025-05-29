@@ -1,63 +1,90 @@
-# Glucose Metric Calculator
+# Glucose Metrics Calculator
 
-Thank you for participating in our take-home interview exercise. This project is designed to let you show off your skills in developing a real world application. We understand that your time is valuable, so we recommend that you spend no more than two hours on this assignment. Focus on demonstrating your thought process and approach, even if you do not completely finish the task. It's perfectly acceptable to leave parts of the assignment unfinished. Prioritize quality over quantity in your submission.
+## Design considerations
 
-## Guidelines
-1. Complete this exercise independently.
-2. Use any tools and resources you typically use in your daily work. This includes AI coding assistants like GitHub Copilot or ChatGPT. Please include a summary of your prompts your submission.
-3. Please don’t spend more than 2 hours working on this exercise.
-4. Completion of this assignment is not required. Please focus on quality rather than finishing every task.
-5. Utilize this repository for building the required components.
+#### Authentication
 
-## Project Overview
-Continuous glucose monitoring generates a series of data points representing a person's glucose levels over time. Your goal is to create a full-stack application that calculates and displays glucose metrics from a member’s glucose data. This information will help health coaches make informed decisions about member’s care.
+I've deliberately kept the Member model and authentication light, as I considered it out of scope for this project. Authentication of API requests is done via JWTs that contain a Member id. JWTs keep the solution simple, since we don't need to store a record in the database of a user's session.
+This way, we can use the authenticated Member to look up their associated glucose metrics. Registration, Login, and Logout are assumed, but omitted. Tests generate a JWT as needed. The frontend uses a hardcoded JWT.
 
-## Requirements
-Develop a full-stack application that features a glucose metrics dashboard. The application should calculate and display the following glucose metrics for a given time period:
-- Average glucose level
-- Time below range
-- Time above range
+#### Wider feature scope
 
-Each metric should be calculated for two different time frames: 
-- The last 7 days
-- The current calendar month
+Submitting glucose measurements is assumed, but considered out of scope.
 
-Additionally, the application should calculate the change in each metric from the prior period. For example, this includes comparing this month's average glucose level to last month's. Please refer to the definitions provided below for clarity on each metric.
+#### Frontend
 
-## Definitions
-- **Average Glucose (mg/dL):** The sum of all glucose values in a specific time frame (week/month) divided by the total number of readings available in that time frame.
-- **Time Above Range (%):** The percentage of glucose readings in a specific time frame (week/month) that are above 180 mg/dL.
-- **Time Below Range (%):** The percentage of glucose readings in a specific time frame (week/month) that are below 70 mg/dL. 
-- **Last 7 Days:** The “Last 7 days” includes available glucose data from 12:00:00am to 11:59:59pm local time on the current day and the 6 prior days. 
-- **Month:** A “month” of glucose data includes all available glucose readings from 12:00:00am local time on the first day of a calendar month to 11:59:59pm local time on the last day of that calendar month.
-- **Change Since Prior Period (% or mg/dL):** The difference between a metric for the current time frame vs. the previous time frame (for example this month’s time in range compared to last month’s). Obtained by subtracting the current metric from the previous one. If the metrics being compared are percentages, the change will also be shown as a percentage.
+Given that my conversation with Adam indicated that frontend is a low priority for his team, I've kept the frontend very simple, with standard unstyled HTML.
 
-## Technical Requirements
-- Build this application using Ruby and Ruby on Rails.
-- For the purpose of this exercise, use any active record compatible database. 
-- Each metric should be associated with the member it was calculated for.
-- Bonus:
-  - Implement an API that can return metrics for a given member and time frame.
-  - Consider caching strategies for performance enhancement.
+#### Caching
 
-## What We Are Looking For
-Here’s what we value in this assignment:
-- Functionality as outlined above.
-- Best practices and clean, maintainable code.
-- If you make any assumptions, please document them in your README.
-- Highlight any improvements you’d make with more time in your README. You’ll have the chance to discuss these during the next onsite interview.
+_Because caching is always a matter of choosing performance at some tradeoff, I've explained some options below for potential future implementation._
 
-## Submission Guidelines
-- Project Setup:
-  - Set up your local development environment as needed.
-  - Commit all changes to this repository.
-- Submit Your Work:
-  - Once your solution is complete and you’re ready to submit it, please create a Merge Request (Pull Request) against this repository.
-  - Export AI prompt summaries and include them in the README file.
-    - ChatGPT prompts can be exported to markdown (.md) format by clicking export in the top right corner of the chat window
-    - Cursor prompts can be exported using https://github.com/thomas-pedersen/cursor-chat-browser
-  - Email your submission to interview-submissions@omadahealth.com, cc'ing the recruiting team.
-  - **Timeline: You have 3 days to complete and submit the assignment.** If you have questions or need assistance, contact interview-submissions@omadahealth.com.
+Glucose measurements are assumed to be immutable, append-only, and uploaded automatically at the time of measurement. This means measurements are a time-series and can be cached in Postgres with a Block Range Index. Without a deep understanding of typical measurement cadence, I'm assuming the heaviest use case: a type 1 diabetic would measure at most 10 times a day, meaning 70 measurements in a week, 300 in a month. So the BRIN page size might be 70, as an example:
+
+```sql
+CREATE INDEX glucose_levels_tested_at_brin_idx
+    ON glucose_levels
+ USING BRIN (tested_at)
+  WITH (pages_per_range = 70);
+```
+
+Additionally, a request-level cache that bypasses the entire application and database would be very simple. The cache could use a compound key of the `member_id` and `tested_at:date`. The only cache that would ever need to be invalidated would be the current date, when a new measurement is added. This would require restructuring the application to do the calculations client-side, and having the API return measurements grouped by date.
+
+## Future improvements
+
+- Uploading glucose measurements
+- Viewing a list of all glucose measurements used in the calculations
+- Graphs or other visual representations of measurements over time
+- Member Login/Logout/Registration
+- Member profiles
+- Expiring JWTs, refresh tokens
+- Frontend styling
+
+## Cursor prompts
+
+I was unable to use cursor-chat-browser to export my prompts as it was having runtime errors reading my cursor history. I suspect this might be a result of the major changes to Cursor recently, and that cursor-chat-browser hasn't been updated in a month.
+
+So below are the prompts I gave Cursor during development:
+
+```
+Given the instructions in INSTRUCTIONS.md, write a new service for retrieving the glucose reading calculations. The service's methods should accept a Member and a time frame (week or month).
+```
+
+```
+Write RSpec tests for the GlucoseMetricsService
+```
+
+```
+Write a new API route that takes a time frame (week or month) and returns the metrics returned by the GlucoseMetricsService. The Member of the metrics is the Member making the API request, identified by the Authorization header containing a JWT.
+```
+
+```
+Move JWT generation and decoding to a new Auth service
+```
+
+```
+Update index.jsx with an option to select either week or month for the glucose metrics
+```
+
+```
+Update the API request to use a JWT for authentication
+```
+
+```
+Login and logout are out of scope for this. We'll use a hardcoded JWT for authentication with the API.
+```
+
+```
+Update GlucoseMetricsService to also calculate the change in each metric compared to the previous period (for example, if the time period is "week", then it should calculate the change from the previous week)
+```
+
+```
+Update index.jsx to display the change from previous period also
+```
+
+```
+Use a table to display the metrics
+```
 
 ## Prerequisites
 
@@ -81,26 +108,31 @@ Here’s what we value in this assignment:
 ### Local Development Setup
 
 1. Install Ruby dependencies:
+
 ```bash
 bundle install
 ```
 
 2. Install JavaScript dependencies:
+
 ```bash
 yarn install
 ```
 
 3. Build JavaScript assets:
+
 ```bash
 yarn build
 ```
 
 4. Set up the database:
+
 ```bash
 bundle exec rails db:create db:setup db:seed
 ```
 
 5. Start the development server:
+
 ```bash
 bin/dev
 ```
@@ -111,20 +143,11 @@ The application will be available at `http://localhost:3000`
 
 ### Frontend Development
 
-The application uses React for the frontend with esbuild for bundling. Key files and directories:
-
-- `app/javascript/application.js` - Main JavaScript entry point
-- `app/javascript/application/` - React components directory
-- `app/assets/builds/` - Compiled JavaScript assets
-
-#### Building JavaScript Assets
-
 For development with automatic rebuilding:
+
 ```bash
 yarn build:watch
 ```
-
-The watch mode will automatically rebuild your JavaScript assets whenever you make changes to your React components or JavaScript files.
 
 ### Testing
 

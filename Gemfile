@@ -10,6 +10,7 @@ gem "jsbundling-rails"
 gem "turbo-rails"
 gem "stimulus-rails"
 gem "jbuilder"
+gem "jwt"
 
 # Use Redis adapter to run Action Cable in production
 # gem "redis", ">= 4.0.1"
